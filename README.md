@@ -21,7 +21,7 @@
 
 **English** · [한국어](README.ko.md)
 
-[Problem](#-the-problem) · [Process redesign](#-what-changed--process-redesign) · [Features](#-key-features) · [Architecture](#-architecture) · [AI design](#-ai-design--ai-prepares-people-decide) · [Challenges](#-engineering-challenges) · [How I worked](#-how-i-built-and-ran-it)
+[Problem](#the-problem) · [Process redesign](#what-changed--process-redesign) · [Features](#key-features) · [Architecture](#architecture) · [AI design](#ai-design--ai-prepares-people-decide) · [Challenges](#engineering-challenges) · [How I worked](#how-i-built-and-ran-it)
 
 </div>
 
@@ -32,7 +32,7 @@
 > All screenshots and examples use **synthetic data**, and company, customer and internal-system names have been generalized.
 > I'm happy to walk through the code in an interview.
 
-## 📌 At a glance
+## At a glance
 
 | | |
 |---|---|
@@ -49,7 +49,7 @@
 
 ---
 
-## 🧭 The problem
+## The problem
 
 The company already had an **engineering change management standard** and a **design & development procedure**. The problem wasn't the procedures. It was **how they were followed**.
 
@@ -64,7 +64,7 @@ The company already had an **engineering change management standard** and a **de
 
 In short, **the outcome depended on who happened to handle the work.**
 
-## 🔧 What changed — process redesign
+## What changed — process redesign
 
 I didn't invent a new process. I **read the existing procedures clause by clause and turned them into screens, rules and gates**, so the system, not people's memory, holds the order, deadlines, approval lines and checks.
 
@@ -120,7 +120,7 @@ Step numbers (1–10) stayed fixed for data compatibility; only **names, groupin
 
 More detail: [docs/01-process-redesign.md](docs/01-process-redesign.md)
 
-## ✨ Key features
+## Key features
 
 <table>
 <tr>
@@ -191,7 +191,7 @@ The company file server is integrated under a **read-only contract**, with a ser
 
 <!-- TODO: screenshots on synthetic data — see docs/images/README.md -->
 
-## 🏗 Architecture
+## Architecture
 
 ```mermaid
 flowchart TB
@@ -229,7 +229,7 @@ flowchart TB
 
 More detail: [docs/02-architecture.md](docs/02-architecture.md)
 
-## 🤖 AI design — "AI prepares, people decide"
+## AI design — "AI prepares, people decide"
 
 What I guarded against most when adding AI to a business system was **an AI mistake persisting as data**.
 
@@ -248,7 +248,7 @@ The LLM provider changed during production, from an external API to an internal 
 
 More detail: [docs/03-ai-design.md](docs/03-ai-design.md)
 
-## 🧗 Engineering challenges
+## Engineering challenges
 
 <details open>
 <summary><b>1. An external events API silently ignored its paging parameters</b></summary>
@@ -299,7 +299,7 @@ The company file server holds data for the whole organization. One bug that dele
 
 More cases and Architecture Decision Records: [docs/04-engineering-decisions.md](docs/04-engineering-decisions.md)
 
-## 🛠 How I built and ran it
+## How I built and ran it
 
 - **AI pair programming.** I used Claude Code throughout design, implementation and review. I owned requirements, interpreting the procedures, design decisions, verification and operational calls, and built the implementation together with the AI. Several AI sessions often worked in the same tree at once, so I made **handoff documents**, a `git status` check before every commit and build-copy diffs before every release into standing rules.
 - **Change ledger.** Every source change is logged before the task is closed. Entries name the **menu path users see**, not file paths, as "previous problem → new behavior → operational notes", so a business user can read it and act. There are 1,300+ entries so far.
@@ -309,7 +309,7 @@ More cases and Architecture Decision Records: [docs/04-engineering-decisions.md]
 
 More detail: [docs/05-operations.md](docs/05-operations.md)
 
-## 🗓 Timeline
+## Timeline
 
 ```mermaid
 timeline
@@ -325,7 +325,7 @@ timeline
             : 10-19 AI field auto-fill across screens (2.51)
 ```
 
-## 🧰 Tech stack
+## Tech stack
 
 | Area | Technology | Why |
 |---|---|---|
@@ -336,21 +336,21 @@ timeline
 | AI | Internal LLM gateway · Gemini · Ollama (local) · domestic-region STT | Swappable behind a provider layer; where the data goes decides the provider |
 | Design | In-house canonical UI on KRDS (Korean government design system) | Proven accessibility and readability standards |
 
-## 🙋 My role
+## My role
 
 - Analyzed the company procedures (engineering change standard, design & development procedure) clause by clause and **designed how they map to screens, rules and gates**
 - **Planned and built** the frontend, server, document generation and AI features
 - Planned and executed the production cutover (data migration, port handover, rollback plan)
 - Ran **the full operating loop**: intake of user requests → prioritization → release → change-ledger entry
 
-## 💡 What I learned
+## What I learned
 
 - **Digitizing a procedure means deciding what to block and what to only record.** Block everything and people work around the system.
 - **Trust measurements over API docs.** One paging parameter can make data disappear silently.
 - **AI feature quality is decided by failure handling more than by the model.** You can't operate it without fallbacks, metrics and honest failure states.
 - **In a live system, rollback is a feature.** You can only fix fast if you can undo fast.
 
-## 📂 Repository layout
+## Repository layout
 
 ```
 .
@@ -366,7 +366,7 @@ timeline
     └── images/                     ← banner, screenshots (synthetic data)
 ```
 
-## 📬 Contact
+## Contact
 
 <!-- TODO: email · blog · LinkedIn -->
 - GitHub: [@hupositoc](https://github.com/hupositoc)
