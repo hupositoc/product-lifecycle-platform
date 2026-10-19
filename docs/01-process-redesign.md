@@ -1,100 +1,100 @@
-# 01. 절차서를 화면 · 규칙 · 관문으로 옮긴 과정
+# 01. Turning procedures into screens, rules and gates
 
-[← README](../README.md)
+[← README](../README.md) · [한국어](ko/01-process-redesign.md)
 
-## 출발점: 절차는 있었다
+## Starting point: the procedures already existed
 
-회사에는 품질경영 체계에 따른 두 개의 사내 표준이 있었습니다.
+The company had two internal standards under its quality management system.
 
-| 표준 | 다루는 일 | 단계 |
+| Standard | Covers | Steps |
 |---|---|---|
-| 설계변경 관리 지침서 | 양산 이후의 설계 변경(ECN) — 접수부터 현장 적용 · 종결까지 | 10단계 |
-| 설계·개발 절차서 | 신규 제품 개발 — 개발 개시부터 양산 이관 · 완료 보고까지 | 10단계 |
+| Engineering change management standard | Post-production design changes (ECN), from intake to shop-floor application and closure | 10 |
+| Design & development procedure | New products, from kick-off to transfer to production and the completion report | 10 |
 
-절차서는 잘 쓰여 있었지만, 실제로 지켜지는 방식은 **담당자의 기억과 엑셀**이었습니다. 그래서 목표를 「새 프로세스 설계」가 아니라 **「같은 절차를 누가 맡아도 같은 순서로 밟게 하는 것」**으로 잡았습니다.
+The documents were well written, but in practice they ran on **people's memory and spreadsheets**. So the goal was not "design a new process" but **"make the same procedure run in the same order, whoever handles it."**
 
-## 방법: 조항 → 규칙 → 화면
+## Method: clause → rule → screen
 
 ```mermaid
 flowchart LR
-    A[절차서 조항] --> B[규칙 정의<br/>진행 조건 · 산출물 · 책임 부서 · 기한]
-    B --> C[규칙 모듈<br/>단일 출처 함수]
-    C --> D1[스테퍼 · 진행 단추]
-    C --> D2[알람 엔진]
-    C --> D3[대시보드 지표]
-    C --> D4[AI 에이전트의 답]
+    A[Procedure clause] --> B[Rule definition<br/>conditions · deliverables · owner · deadline]
+    B --> C[Rule module<br/>single source of truth]
+    C --> D1[Stepper · advance button]
+    C --> D2[Alarm engine]
+    C --> D3[Dashboard metrics]
+    C --> D4[AI agent answers]
 ```
 
-1. **조항을 읽고 표로 만든다** — 단계마다 「누가 · 무엇을 · 어떤 서식으로 · 언제까지」를 뽑았습니다. 서식은 사내 양식 원본을 그대로 기준으로 삼았습니다.
-2. **규칙을 한 곳에 둔다** — 「이 건이 다음 단계로 갈 수 있는가」는 화면마다 판단하지 않고 `ecnAdvanceBlocker()` · `ecnClosureBlocker()` 같은 규칙 함수 하나가 결정합니다. 화면 · 알람 · 대시보드 · AI 답변이 같은 함수를 봅니다.
-3. **근거를 남긴다** — 절차서에 없는 것을 시스템이 지어내지 않도록, 규칙마다 근거 조항이나 현업 결정(날짜 · 결정 내용)을 주석으로 남겼습니다. 예를 들어 「GATE · 게이트 · 관문」이라는 말은 지침서 전문에 한 번도 나오지 않는다는 것까지 확인해 기록했습니다.
+1. **Read each clause and turn it into a table.** For every step: who does what, in which form, by when. The official form templates were the reference.
+2. **Keep rules in one place.** "Can this case move to the next step?" is never decided per screen. One rule function, such as `ecnAdvanceBlocker()` or `ecnClosureBlocker()`, answers it, and screens, alarms, dashboards and the AI agent all call the same function.
+3. **Record the source.** So the system never invents rules the procedure doesn't contain, each rule carries a comment citing its clause or the business decision (date and content) behind it. That went as far as confirming that the words "gate" and "checkpoint" never appear anywhere in the standard's text.
 
-## 설계변경(ECN) 흐름 — 현재
+## Engineering change (ECN) flow — current
 
 ```mermaid
 flowchart LR
-    subgraph P1["접수·검토"]
-        s1[1 접수] --> s2[2 적용대상 분류] --> s3[3 타당성 평가] --> s4[4 내부 회의] --> s5[5 변경점 수정]
+    subgraph P1["Intake & review"]
+        s1[1 Intake] --> s2[2 Scope] --> s3[3 Feasibility] --> s4[4 Internal meeting] --> s5[5 Revise documents]
     end
-    subgraph P2["ECN 배포"]
-        s6[6 ECN 작성 · 결재선] --> s7[7 결재] --> s8[8 배포]
+    subgraph P2["ECN release"]
+        s6[6 Draft ECN · approval line] --> s7[7 Approval] --> s8[8 Release]
     end
-    subgraph P3["적용·종결"]
-        s9[9 적용 진행<br/>구매·자재·생산·품질] --> s10[10 종결]
+    subgraph P3["Apply & close"]
+        s9[9 Applying<br/>Purchasing · Materials · Production · Quality] --> s10[10 Closure]
     end
     s5 --> s6
-    s7 -. 관문 1 · 결재선 전원 승인 .-> s8
+    s7 -. Gate 1 · all approvers signed .-> s8
     s8 --> s9
-    s9 -. 관문 2 · 부서 응답 확인 · 품질 종결 .-> s10
-    s7 -- 반려 --> s5
+    s9 -. Gate 2 · all departments answered · QA closes .-> s10
+    s7 -- rejected --> s5
 ```
 
-| 단계 | 시스템이 대신 챙기는 것 |
+| Step | What the system takes care of |
 |---|---|
-| 1 접수 | 접수 경로별 필수값 검증, 번호 자동 채번, 관리대장 자동 기록, 고객 요청은 **회신 기한 자동 계산**. 수신 메일은 자동으로 접수 후보가 되고, 같은 내용의 **중복 접수와 자주 바뀌는 부품을 경고** |
-| 2 적용대상 분류 | 4M(사람 · 설비 · 자재 · 방법) + S/W 선택 → **개정 대상 양산문서 자동 제시** |
-| 4 내부 회의 | 회의록 양식 + 회의 녹음 → 녹취 → AI 초안. 경미한 건은 사유를 적고 생략 |
-| 5 변경점 수정 | 양산문서별 Before/After · 차이점 · 개정본 업로드. BOM이 있으면 전후 BOM 자동 대조 |
-| 6~8 ECN 배포 | ECN 양식 PDF 생성 · 문서함 보관, 결재선 구성 · 상신, 승인 후 배포 부서 자동 지정 |
-| 9 적용 진행 | 4개 부서가 각자 적용 내용 · 시점을 기록. 즉시 적용이 안 되는 건은 월 정기회의 안건으로 |
-| 10 종결 | **응답하지 않은 부서가 있으면 종결 불가**. 부서 응답 → 품질 확인 → 종결 |
+| 1 Intake | Required fields per channel, automatic numbering, automatic ledger entry, **reply deadline** for customer requests. Incoming email becomes an intake candidate; **duplicate intakes and frequently changed parts are flagged** |
+| 2 Scope | Pick 4M (man, machine, material, method) + S/W → **production documents to revise are suggested** |
+| 4 Internal meeting | Minutes form + meeting recording → transcript → AI draft. Minor cases can skip with a recorded reason |
+| 5 Revise documents | Before/after and diff for each production document, revised file upload. Automatic BOM diff when a BOM is involved |
+| 6–8 ECN release | ECN form generated as PDF and archived, approval line built and submitted, release departments assigned on approval |
+| 9 Applying | Each of the four departments records what it applied and when. Items that can't be applied immediately go to the monthly review |
+| 10 Closure | **Cannot close while any department hasn't answered.** Department answers → QA check → closure |
 
-### 반려와 회귀
-결재가 반려되면 5단계(변경점 수정)로 돌아갑니다. 문서와 이력은 남기고, 다시 결재선을 거치게 합니다. 반려된 건을 다시 올릴 때는 **재상신 도우미**가 반려 의견과 바뀐 점을 정리해 줍니다.
+### Rejection and rework
+A rejected approval returns the case to step 5 (revise documents). Documents and history are kept, and the case goes through the approval line again. When resubmitting, a **resubmission helper** summarizes the rejection comments and what has changed since.
 
-## 신규 개발 흐름
+## New product development flow
 
-| PHASE | 단계 | 관문 |
+| Phase | Steps | Gate |
 |---|---|---|
-| 기획 | 1 개발 개시 경위 · 2 개발 타당성 검토 · 3 개발 계획 수립 | **이사회 승인** |
-| 설계 | 4 설계 입력(체크시트 19항목) · 5 설계 수행 | **연구소장 확인** |
-| 검증 | 6 시제품 제작 · 7 설계 검증 · 8 설계 검토(품평회) | **품평회 통과** |
-| 이관 | 9 양산 이관(체크시트 14항목) · 10 개발 완료 보고 | **고객 승인원** |
+| Planning | 1 Kick-off · 2 Feasibility review · 3 Development plan | **Board approval** |
+| Design | 4 Design input (19-item checklist) · 5 Design | **R&D head sign-off** |
+| Verification | 6 Prototype · 7 Design verification · 8 Design review | **Design review passed** |
+| Transfer | 9 Transfer to production (14-item checklist) · 10 Completion report | **Customer approval** |
 
-- **진행 차단 3층** — 관문 미승인(차단) / 서식 미완성(차단) / 필수 산출물 미등록(**사유 기재 시 진행**, 누락 알람 유지)
-- **재설계 회귀** — 설계 검증 단계에서만 설계 수행 · 시제품 단계로 되돌릴 수 있고, 회차 이름과 원인 분석이 필수(2회차부터는 조치 계획도). 산출물과 관문 승인은 유지됩니다.
-- **산출물 등록 두 경로** — 양식 작성(팝업 서식 → PDF → 문서함, PDF 생성 실패 시 등록 안 함) / 파일 첨부(업로드 **전**에 파일명과 산출물명을 대조해 불일치면 중단)
+- **Three tiers of blocking**: unapproved gate (blocked) / incomplete form (blocked) / missing deliverable (**proceeds with a recorded reason**, alarm stays on)
+- **Redesign loop**: only from design verification can a project go back to design or prototype. A round name and root cause are required, plus an action plan from round 2. Deliverables and gate approvals are kept.
+- **Two ways to register a deliverable**: fill the form (popup form → PDF → document store; if PDF generation fails, nothing is registered) / attach a file (filename vs. deliverable name is checked **before** upload; a mismatch stops it)
 
-## 「막을 것」과 「기록만 남길 것」
+## Block, record or notify
 
-| 구분 | 예 | 처리 |
+| Kind | Examples | Handling |
 |---|---|---|
-| 막는다 | 결재 미승인, 부서 미응답, 필수 서식 미완성 | 단추가 열리지 않음. 이유를 단추 옆에 표시 |
-| 기록하고 진행 | 필수 산출물 미등록, 경미 건 회의 생략 | 사유 입력 → 진행 → 알람 유지 |
-| 알리기만 | 일정 초과, 예산 초과, 회신 기한 임박, 결재 대기 | 알람 엔진이 상태에서 계산(저장하지 않는 파생값) |
+| Block | Approval missing, a department hasn't answered, required form incomplete | Button stays disabled, with the reason shown next to it |
+| Record and proceed | Required deliverable missing, minor case skipping the meeting | Enter a reason → proceed → alarm remains |
+| Notify only | Schedule overrun, budget overrun, reply deadline near, pending approval | Computed by the alarm engine from current state (a derived value, never stored) |
 
-알람은 **저장하지 않고 매번 상태에서 계산**합니다. 저장된 알람은 상태와 어긋나기 시작하면 아무도 믿지 않게 되기 때문입니다.
+Alarms are **recomputed from state every time instead of stored**. Once stored alarms drift from reality, nobody trusts them again.
 
-## 운영하며 줄여 나간 기록
+## A record of simplifying while live
 
-| 시점 | 변경 | 근거 |
+| Date | Change | Reason |
 |---|---|---|
-| 09-08 | 2단계에서 변경유형 선택란 삭제, 이름을 「적용대상 분류」로 | 실제로 하는 일은 적용대상 확정뿐이었음 |
-| 09-08 | 5~6단계 사이 관문 삭제, ECN 본문 작성을 6단계로 | 본문을 쓰면서 등급을 정하는 것이 실제 순서 |
-| 09-18 | 관문 3개 → 2개, 6~8단계를 「ECN 배포」로 묶음 | 쓰고 → 올리고 → 승인되면 내보내는 한 흐름 |
-| 09-21 | 「양산 적용」 → 「적용 진행」 | 네 부서가 적용을 **진행하는 구간 전체**라는 뜻이 드러나게 |
-| 09-23 | 품질 승인만으로 자동 종결하지 않음 | 시운전 피드백: 부서 검토 → 품질 확인 → 부서 처리 결과 확인 → 종결 |
-| 09-30 | 결재 등급(Class) 폐지, 결재선 · 회람선 직접 관리 | 아무것도 막지 않는 「등급 확정 대기」 알람도 함께 제거 |
-| 10-05 | 배포 대상 = 결재선 팀장의 부서 | 같은 것을 두 번 체크하지 않게 |
+| 09-08 | Dropped the change-type picker in step 2 and renamed it "Scope" | All the step really did was confirm the scope |
+| 09-08 | Removed the gate between steps 5 and 6; ECN drafting moved to step 6 | Deciding the level while writing the ECN is the real order of work |
+| 09-18 | 3 gates → 2; steps 6–8 grouped as "ECN release" | Write → submit → release on approval is one flow |
+| 09-21 | "Production applied" → "Applying" | It is the whole span in which four departments **carry out** the change |
+| 09-23 | QA approval alone no longer closes a case | Pilot feedback: department review → QA check → confirm each department's result → close |
+| 09-30 | Approval classes removed; approval and circulation lines edited directly | An alarm that blocked nothing ("level confirmation pending") was removed too |
+| 10-05 | Release list = departments of the team leads on the approval line | Nobody checks the same thing twice |
 
-단계 **번호는 바꾸지 않고** 이름 · 묶음 · 관문만 재배치했습니다. 앱의 모든 판정은 단계 번호와 규칙 함수로만 이뤄지고, 단계 이름을 값으로 비교하는 곳은 없다는 것을 전수 확인한 뒤 바꿨습니다.
+Step **numbers were never changed**; only names, grouping and gates were rearranged. Before changing them I verified that every decision in the app uses step numbers and rule functions, and that nothing compares step names as values.

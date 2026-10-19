@@ -1,66 +1,66 @@
-# 04. 의사결정 기록 (ADR)
+# 04. Architecture Decision Records (ADR)
 
-[← README](../README.md)
+[← README](../README.md) · [한국어](ko/04-engineering-decisions.md)
 
-결정마다 **맥락 → 결정 → 결과**를 남깁니다. 나중에 「왜 이렇게 했지?」에 답하기 위한 기록입니다.
+Each decision records **context → decision → consequence**, so that "why did we do this?" always has an answer.
 
 ---
 
-### ADR-01 · 서버는 Node 내장 모듈만 쓴다
-- **맥락** 사내 서버는 외부망 패키지 설치 · 갱신이 사실상 어렵고, 원격 접속은 파일 공유와 HTTP만 열려 있음.
-- **결정** `node:http` · `node:sqlite` · `node:crypto` · `node:child_process`만으로 서버 구성. npm 런타임 의존성 0.
-- **결과** 설치는 Node 하나. 공급망 위험이 없음. 대신 라우팅 · 쿠키 · 멀티파트 파싱을 직접 작성 · 테스트해야 했음.
+### ADR-01 · The server uses Node built-ins only
+- **Context.** Installing or updating packages on the company server is impractical, and remote access is limited to file sharing and HTTP.
+- **Decision.** Build the server on `node:http`, `node:sqlite`, `node:crypto` and `node:child_process` only, with zero npm runtime dependencies.
+- **Consequence.** Installing means installing Node, with no supply-chain risk. The trade-off: routing, cookies and multipart parsing had to be written and tested by hand.
 
-### ADR-02 · 진행 차단 판정은 규칙 함수 하나가 정한다
-- **맥락** 같은 「다음 단계로 갈 수 있는가」를 스테퍼 · 단추 · 대시보드 · 알람이 각자 판단하면 어긋남.
-- **결정** `ecnAdvanceBlocker()` · `ecnClosureBlocker()` 같은 규칙 함수를 단일 출처로. 모든 판정은 단계 **번호**로만, 이름으로 비교하지 않음.
-- **결과** 절차 개편(관문 3→2, 등급 폐지)을 진행 중인 건을 멈추지 않고 반영.
+### ADR-02 · One rule function decides blocking
+- **Context.** If the stepper, buttons, dashboard and alarms each decide "can this advance?", they drift apart.
+- **Decision.** Rule functions such as `ecnAdvanceBlocker()` and `ecnClosureBlocker()` are the single source of truth. Every decision uses the step **number**, never the step name.
+- **Consequence.** Procedure redesigns (3 → 2 gates, approval classes removed) shipped without pausing in-flight cases.
 
-### ADR-03 · 엑셀 대장은 원본 + 셀 오버레이로 이관
-- **맥락** 10년치 엑셀 대장은 이관 뒤에도 한동안 엑셀에서 갱신됨. 한 번 옮기면 끝인 방식도, 계속 덮어쓰는 동기화도 맞지 않음.
-- **결정** 원본 행은 엑셀 서명(해시)을 감시해 갱신하고, 사람이 고친 값은 **셀 단위 오버레이**에 따로 저장해 위에 얹음.
-- **결과** 원본과 편집이 섞이지 않고, 셀마다 변경 이력이 남음.
+### ADR-03 · Ledger migration as source + per-cell overlay
+- **Context.** The ten-year spreadsheet ledger kept being updated in the spreadsheet for a while after migration. Neither a one-off import nor a continuously overwriting sync would do.
+- **Decision.** Watch the workbook's signature (hash) to refresh source rows, and store human edits in a **per-cell overlay** on top.
+- **Consequence.** Source and edits never mix, and each cell keeps its own history.
 
-### ADR-04 · 동시 편집은 낙관적 잠금으로
-- **맥락** 같은 건을 여러 부서가 동시에 열어 둠. 잠금을 걸면 자리를 비운 사람 때문에 일이 멈춤.
-- **결정** `version` 컬럼 비교. 저장 시 버전이 다르면 거부하고 최신본을 다시 받게 함.
-- **결과** 덮어쓰기 사고 없이 동시 열람 가능.
+### ADR-04 · Optimistic locking for concurrent edits
+- **Context.** Several departments keep the same case open at once. Pessimistic locks would stall work whenever someone walks away.
+- **Decision.** Compare a `version` column; if it changed, reject the save and reload the latest copy.
+- **Consequence.** Concurrent viewing with no overwrite accidents.
 
-### ADR-05 · 외부 파일 서버는 읽기 전용 계약
-- **맥락** 전사 자료가 있는 저장소. 버그 하나로 파일이 지워지면 복구가 어려움.
-- **결정** 외부 호출을 `guardedFetch` 한 곳으로, 허용 루트 밖은 모든 경로에서 403. 보안 폴더는 색인 · 열람 · 검색 · 다운로드 전부 차단. 쓰기(백업 업로드)는 별도 모듈로 분리.
-- **결과** 연동 범위가 코드 한 곳에서 보임.
+### ADR-05 · A read-only contract for the external file server
+- **Context.** It holds data for the whole organization. One bug that deletes a file would be hard to recover from.
+- **Decision.** Route outbound calls through one `guardedFetch`, return 403 outside the allowed roots on every path, and block a restricted folder across indexing, browsing, search and download. Writes (backup upload) live in a separate module.
+- **Consequence.** The integration's reach is visible in one place in the code.
 
-### ADR-06 · 파일명 검색은 자체 색인으로 (「Everything」 방식)
-- **맥락** 외부 파일 서버 검색 API가 느리고 부분 일치가 약함.
-- **결정** 파일명 색인을 서버 DB에 미리 만들고, 변경 저널로 색인만 갱신, 검색은 정규화 이름(NFC · 소문자 · 구분기호 제거) 부분 일치 + 토큰 AND.
-- **결과** 즉시 검색. 색인이 서버 안에만 있으므로 외부 저장소는 바뀌지 않음.
+### ADR-06 · Our own filename index ("Everything"-style)
+- **Context.** The file server's search API is slow and weak at partial matches.
+- **Decision.** Build the filename index in the server DB ahead of time, update it from the change journal, and search normalized names (NFC, lowercase, separators removed) by substring with AND across tokens.
+- **Consequence.** Instant search. The index lives only on our server, so the file server is never modified.
 
-### ADR-07 · 외부 API는 실측으로 설계한다
-- **맥락** 변경 이벤트 API의 `skip` · `page`가 문서와 달리 무시됨 → 매번 최신 100건만 오고, 그 사이 이벤트가 영영 누락.
-- **결정** 시간 창(`from` · `to`)을 쓰고, 창의 총건수가 응답보다 크면 창을 **반으로 쪼개** 읽음. 창을 통째로 읽었을 때만 워터마크 전진.
-- **결과** 누락 없는 색인. 이후 외부 연동은 API 동작을 먼저 실측하고 결과를 주석으로 남김.
+### ADR-07 · Design external integrations from measurements
+- **Context.** Unlike its docs, the events API ignored `skip`/`page`: every call returned the latest 100 events, and everything in between was lost.
+- **Decision.** Use time windows (`from`/`to`); if a window's total exceeds the page, **split it in half** and read again. Advance the watermark only after a full window is read.
+- **Consequence.** An index with no gaps. Since then, external APIs are measured before integration, with the findings left in code comments.
 
-### ADR-08 · LLM은 공급자 한 겹 뒤에
-- **맥락** 공급자가 운영 중에 바뀜(외부 API → 사내 게이트웨이). 사내 게이트웨이에는 tool calling이 없음.
-- **결정** 호출만 아는 공급자 계층 + 「JSON만 출력」 Tool 규약.
-- **결과** 화면 변경 없이 공급자 교체.
+### ADR-08 · LLMs behind a provider layer
+- **Context.** The provider changed in production (external API → internal gateway), and the gateway lacks tool calling.
+- **Decision.** A provider layer that only knows how to call, plus a "JSON-only" tool protocol.
+- **Consequence.** The provider was swapped without touching the UI.
 
-### ADR-09 · STT는 데이터 위치로 고른다
-- **맥락** 회의 음성은 마스킹이 불가능.
-- **결정** 가격보다 **데이터 국내 체류**를 우선해 공급자 선정.
-- **결과** 단가는 더 들지만 보안 검토를 통과할 수 있는 구조.
+### ADR-09 · Choose STT by data residency
+- **Context.** Meeting audio can't be masked.
+- **Decision.** Prioritize **keeping data in the country** over price when choosing a provider.
+- **Consequence.** A higher unit price, but a design that can pass a security review.
 
-### ADR-10 · 알람은 저장하지 않는다
-- **맥락** 저장된 알람은 상태와 어긋나는 순간 신뢰를 잃음.
-- **결정** 알람은 상태에서 규칙으로 계산하는 파생값.
-- **결과** 일정 초과 · 산출물 누락 · 예산 초과 · 회신 기한 · 결재 대기 등이 항상 현재 상태와 일치.
+### ADR-10 · Alarms are never stored
+- **Context.** Stored alarms lose trust the moment they drift from the real state.
+- **Decision.** Alarms are derived values computed from state by rules.
+- **Consequence.** Schedule overruns, missing deliverables, budget overruns, reply deadlines and pending approvals always match the current state.
 
-### ADR-11 · 세션 토큰은 해시만 저장
-- **결정** 세션 쿠키는 HttpOnly, DB에는 토큰의 sha256만 저장, 12시간 슬라이딩. 결재 직전 비밀번호 재확인(5회 실패 시 60초 잠금).
-- **결과** DB 파일이 유출돼도 세션을 재사용할 수 없음.
+### ADR-11 · Store only token hashes
+- **Decision.** HttpOnly session cookies; the DB stores only the sha256 of each token; 12-hour sliding expiry. Password re-check right before approving (60-second lock after 5 failures).
+- **Consequence.** A leaked DB file can't be used to replay sessions.
 
-### ADR-12 · 롤백 가능한 배포가 먼저
-- **맥락** 직원이 쓰는 중에 하루 여러 번 배포. 서버 원격 기동 불가.
-- **결정** 해시 번들은 지우지 않고 남김 → `index.html`만 되돌리면 롤백. 배포 전 화면 폴더 백업, 빌드 사본 전수 비교. 서버는 `--watch`로 파일 저장 시 재기동.
-- **결과** 운영 전환 뒤 210여 회 배포.
+### ADR-12 · Rollback comes first
+- **Context.** Several releases a day while people work, and no remote server restart.
+- **Decision.** Never delete hashed bundles, so restoring `index.html` is a rollback. Back up the served folder before each release and diff build copies file by file. The server restarts on file save via `--watch`.
+- **Consequence.** 210+ releases since go-live.

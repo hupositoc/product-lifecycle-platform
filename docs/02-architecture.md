@@ -1,89 +1,89 @@
-# 02. 아키텍처
+# 02. Architecture
 
-[← README](../README.md)
+[← README](../README.md) · [한국어](ko/02-architecture.md)
 
-## 구성
+## Components
 
 ```
-브라우저 (React 19 SPA · 자체 라우팅 · 자체 상태 저장소)
+Browser (React 19 SPA · in-house routing · in-house state store)
    │  fetch — /api/v2/*
    ▼
-node server/server.mjs        ← node --watch (파일 저장 시 자동 재기동)
-   ├ ecn10        설계변경 10단계 · 관리대장 그리드
-   ├ projects     프로젝트 · 기안 품의(지출결의)
-   ├ docs/docFiles 문서함 메타 · 첨부 실체 (세션 필수)
-   ├ masterData   사용자 · 팀 마스터
-   ├ auth         세션 쿠키 인증
-   ├ mailer       메일 발송 · 알림 디스패처
-   ├ notifyRules  알림 규칙 (화면과 공유하는 단일 정의)
-   ├ agent*       AI 에이전트 (Tool 정의 · LLM 공급자 · 문서 질의 · 재상신 도우미)
-   ├ meetingRec   회의 녹음 → 녹취 → AI 검수
-   ├ fileServer*  사내 파일 서버 열람 중계 · 파일명 색인 · 개정본 계보
-   └ docPreview   문서 미리보기 공용
+node server/server.mjs        ← node --watch (restarts when a file is saved)
+   ├ ecn10        10-step engineering change · ledger grid
+   ├ projects     projects · expense requests
+   ├ docs/docFiles document metadata · attachments (session required)
+   ├ masterData   users · teams
+   ├ auth         session-cookie authentication
+   ├ mailer       mail delivery · notification dispatcher
+   ├ notifyRules  notification rules (one definition shared with the client)
+   ├ agent*       AI agent (tool definitions · LLM providers · document Q&A · resubmission helper)
+   ├ meetingRec   recording → transcription → AI review
+   ├ fileServer*  company file server relay · filename index · revision lineage
+   └ docPreview   shared document preview
    ▼
 node:sqlite (WAL, 38 tables)
-   + Python 작업자 — XLSX 파싱 · PDF/DOCX 양식 생성 · BOM 대조 · EML 파싱
+   + Python workers — XLSX parsing · PDF/DOCX form rendering · BOM diff · EML parsing
 ```
 
-## 왜 이렇게 구성했나
+## Why it's built this way
 
-| 결정 | 이유 |
+| Decision | Reason |
 |---|---|
-| **서버 npm 런타임 의존성 0** | 사내 서버는 외부 패키지 설치 · 갱신 경로가 사실상 없음. Node 22의 `node:sqlite`가 들어오면서 DB 드라이버까지 내장으로 해결 |
-| **화면 의존성은 React 하나** | 라우터 · 상태관리 라이브러리 없이 주소 라우팅(뒤로 · 앞으로 · 즐겨찾기 · 새로고침 · 링크 공유)과 저장소를 직접 구현. 업무 화면의 상태 전이가 단순해 직접 제어가 더 읽기 쉬움 |
-| **SQLite (WAL)** | 단일 서버 · 수십 명 규모. 파일 하나로 백업 · 이관 · 롤백. 운영 전환도 DB 파일 이관으로 끝남 |
-| **문서 생성은 Python** | 사내 양식을 빈 칸 · 「(예: …)」 안내 문구까지 그대로 재현해야 했음(「나중에 열었을 때 같은 템플릿에 정보만 기입된 형상」). reportlab · PyMuPDF · openpyxl의 표현력이 필요 |
-| **선택 기능은 없어도 뜬다** | AI · 녹취 · 파일 서버가 없으면 해당 기능만 비활성. 핵심 업무는 외부 서비스 장애와 분리 |
+| **Zero npm runtime deps on the server** | There is no practical way to install or update packages on the company server. With `node:sqlite` in Node 22, even the database driver is built in |
+| **React is the only frontend dependency** | Address routing (back/forward, bookmarks, refresh, shareable links) and the store are written by hand. The workflows are simple state transitions, and direct control reads better |
+| **SQLite (WAL)** | One server, tens of users. One file to back up, migrate and roll back, and the production cutover was a DB file migration |
+| **Python for documents** | The official forms had to be reproduced exactly, down to blank cells and "(e.g. …)" hint text: "when opened later, it should look like the same template with the information filled in." That needs reportlab, PyMuPDF and openpyxl |
+| **Optional features stay optional** | Without AI, transcription or the file server, only those features turn off. Core work is isolated from external outages |
 
-## 데이터 모델
+## Data model
 
-| 묶음 | 내용 |
+| Group | Contents |
 |---|---|
-| ECN 정본 · 이력 | 이관 대장 · 10단계 진행 · 워크플로우 이벤트 · 부서별 조치 · 삭제 로그 |
-| 대장 그리드 오버레이 | 셀 · 셀 이력 · 행 · 열 · 셀 서식 · 행 높이 · 사용자별 보기 |
-| 프로젝트 · 지출 · 문서 | 프로젝트 · 기안 품의 · 문서 메타 · 첨부 · BOM 비교 · 회의 녹음 |
-| 계정 · 세션 | 사용자 · 팀 마스터, 세션(토큰은 **sha256 해시만 저장**, 12시간 슬라이딩) |
-| 감사 · 알림 · 설정 | 감사 로그 · 알림 읽음 · 설정 |
-| 메일 | 수신 후보 · 발송 대장 |
-| AI | 요약 배치 · 대화 세션 · 메시지 |
+| ECN source & history | Migrated ledger · 10-step progress · workflow events · department actions · deletion log |
+| Ledger grid overlay | Cells · cell history · rows · columns · cell styles · row heights · per-user views |
+| Projects · spend · documents | Projects · expense requests · document metadata · attachments · BOM comparisons · meeting recordings |
+| Accounts · sessions | User and team master data; sessions (**only the sha256 of each token is stored**, 12-hour sliding expiry) |
+| Audit · notifications · settings | Audit log · read receipts · settings |
+| Mail | Intake candidates · outbox |
+| AI | Summary batches · chat sessions · messages |
 
-- 프로젝트 · 기안 · ECN 본문은 **`payload_json` + `version`** 으로 저장하고, 저장할 때 버전을 비교하는 **낙관적 잠금**을 겁니다.
-- 삭제는 전부 **소프트 삭제**이고, 모든 쓰기는 감사 로그에 남습니다.
-- 번호 채번은 서버가 유일성을 보장합니다(동시 접수 시 충돌하면 서버가 재채번).
+- Projects, expense requests and ECN bodies are stored as **`payload_json` + `version`**; saves compare the version (**optimistic locking**).
+- All deletes are **soft deletes**, and every write lands in the audit log.
+- The server guarantees unique numbering; concurrent intakes that collide are renumbered by the server.
 
-## 권한 모델
+## Permission model
 
-두 체계가 따로 돕니다.
+Two separate systems:
 
-1. **메뉴 권한** — 메뉴 10종 × 읽기 · 쓰기 · 삭제 = 30개 스위치를 사용자별로 저장. 화면 가드는 반드시 `can(user, menu, action)` 하나만 씁니다. 설정 메뉴는 관리자가 아니면 값과 무관하게 항상 거부(하드 게이트). 신규 사용자 기본값은 읽기 전용.
-2. **결재 · 승인 권한** — 결재선 지명 · 직책 · 부서로 판정. 지명된 단계는 실명 일치만, 지명이 없으면 직책 일치.
+1. **Menu permissions.** 10 menus × read/write/delete = 30 switches per user. Screen guards always go through a single `can(user, menu, action)`. Settings are always denied to non-admins regardless of switches (a hard gate). New users default to read-only.
+2. **Approval permissions.** Decided by named approver, title and department on the approval line. A named step requires an exact name match; otherwise the title must match.
 
-결재선에 참조되는 직책의 **마지막 보유자를 삭제하려 하면 경고**합니다. 그 사람이 없으면 결재가 영영 끝나지 않기 때문입니다.
+Deleting **the last holder of a title referenced by an approval line** triggers a warning. Without that person, approvals would never complete.
 
-## 주기 작업
+## Scheduled jobs
 
-| 작업 | 주기 |
+| Job | Interval |
 |---|---|
-| 관리대장 원본(엑셀) 서명 감시 | 60초 |
-| 메일함(.eml) 스캔 → 접수 후보 | 60초 |
-| 메일 알림 발송 | 10분 |
-| 파일 서버 변경 저널 반영 | 5분 |
-| AI 요약 배치 | 10분 (LLM 연결 시에만) |
+| Ledger source workbook signature watch | 60 s |
+| Mailbox (.eml) scan → intake candidates | 60 s |
+| Notification mail delivery | 10 min |
+| File-server change journal | 5 min |
+| AI summary batch | 10 min (only when an LLM is connected) |
 
-기동 순서도 정해 두었습니다 — 대장 서명 확인 → 메일함 스캔 → AI 연결 시도 및 폴백 판정 → 첫 메일 발송. 서버가 `--watch`로 재기동돼도 색인은 **펼치지 않은 폴더부터 이어서** 훑습니다.
+Startup order is fixed: ledger signature check → mailbox scan → AI connection attempt and fallback decision → first mail run. If the server restarts under `--watch`, indexing **resumes from folders not yet expanded**.
 
-## 메일
+## Mail
 
-- 결재 메일은 **화면이 수신자를 지정하지 못합니다.** 서버가 결재선에서 결정합니다.
-- 회의록 · 이관 통보는 수신자를 **이름/ID로만** 받아 서버가 주소로 변환합니다(임의 주소 발송 차단).
-- 알림 규칙(누가 · 언제 · 무엇을 받는가)은 화면과 서버가 **같은 정의 파일**을 공유합니다.
+- The client **cannot choose approval-mail recipients**; the server derives them from the approval line.
+- Minutes and transfer notices take recipients **by name/ID only**, and the server resolves addresses, which blocks sending to arbitrary addresses.
+- Notification rules (who gets what, when) live in **one definition file shared by client and server**.
 
-## 화면 공통 장치
+## Shared UI building blocks
 
-| 장치 | 설명 |
+| Piece | Description |
 |---|---|
-| UI 정본 컴포넌트 | 버튼 · 입력 · 표 · 알림 상자를 한 곳(`src/ui`)에서 정의. 화면별 px · `!important` 덮어쓰기 금지, 단계로만 조정 |
-| 단색 선 아이콘 | 컬러 이모지를 걷어내고 `currentColor` · 1em · 획 고정 아이콘으로 교체(OS마다 그림이 다르고 글자 색을 안 따라가서) |
-| 본인 확인 창 | Promise 기반 전역 단일 호스트. **호스트가 없으면 실패로 처리** — 인증 없이 통과시키지 않음 |
-| 메뉴 안내 투어 | 계정당 최초 한 번만. 다시 보기는 설정에서 |
-| 반응형 | 줄바꿈으로 가독성이 무너지지 않게 표 · 단계 막대를 폭에 따라 재배치, 모바일 화면 대응 |
+| Canonical UI components | Buttons, inputs, tables and alert boxes are defined once (`src/ui`). No per-screen pixel or `!important` overrides; adjust only by defined steps |
+| Monochrome line icons | Replaced color emoji with `currentColor`, 1em, fixed-stroke icons (emoji look different per OS and ignore text color) |
+| Identity re-check dialog | A single Promise-based global host. **If the host is missing, the check fails**, so nothing passes without authentication |
+| Menu tour | Shown once per account; replay only from settings |
+| Responsive layout | Tables and step bars re-flow by width so wrapping never ruins readability; mobile supported |
